@@ -29,7 +29,7 @@ class HomeTableViewCell: UITableViewCell {
         return collectionview
     }()
     
-    
+   
    
 
     override func awakeFromNib() {
@@ -79,6 +79,7 @@ class HomeTableViewCell: UITableViewCell {
             case .success(let success) :
                 print(success)
                 NotificationCenter.default.post(name: NSNotification.Name("downloaded"), object: nil, userInfo: ["MovieDownloaded" : true])
+                
                 break
             case .failure(let error) :
                 print(error)
@@ -118,6 +119,9 @@ extension HomeTableViewCell : UICollectionViewDelegate,UICollectionViewDataSourc
         })
         return configuration
     }
+    
+    
+   
     
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {

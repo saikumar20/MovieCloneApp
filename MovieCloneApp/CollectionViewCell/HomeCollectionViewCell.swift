@@ -22,6 +22,7 @@ class HomeCollectionViewCell: UICollectionViewCell {
     override init(frame: CGRect) {
         super.init(frame: frame)
         contentView.addSubview(MovieimageView)
+        //applyconstraint()
     }
     
     required init?(coder: NSCoder) {
@@ -29,13 +30,34 @@ class HomeCollectionViewCell: UICollectionViewCell {
     }
     
     override func layoutSubviews() {
+        super.layoutSubviews()
+        contentView.layer.masksToBounds = true
         MovieimageView.frame = contentView.bounds
+    }
+    
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        MovieimageView.image = nil
+    }
+    
+    func applyconstraint() {
+        NSLayoutConstraint.deactivate([
+        
+            self.MovieimageView.topAnchor.constraint(equalTo: self.contentView.topAnchor),
+            self.MovieimageView.leadingAnchor.constraint(equalTo: self.contentView.leadingAnchor),
+            self.MovieimageView.trailingAnchor.constraint(equalTo: self.contentView.trailingAnchor),
+            self.MovieimageView.bottomAnchor.constraint(equalTo: self.contentView.bottomAnchor)
+        
+        ])
     }
     
     
     func databinding(imageurl : String?) {
-        guard let url = URL(string: "https://image.tmdb.org/t/p/w500\(String(describing: imageurl ?? ""))") else { return }
-        MovieimageView.sd_setImage(with: url)
+        DispatchQueue.main.async {
+            guard let url = URL(string: "https://image.tmdb.org/t/p/w500\(String(describing: imageurl ?? ""))") else { return }
+            self.MovieimageView.sd_setImage(with: url)
+        }
+       
     }
     
     

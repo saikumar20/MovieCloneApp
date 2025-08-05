@@ -11,9 +11,17 @@ import WebKit
 class previewViewController: UIViewController, WKNavigationDelegate {
     
     let web : WKWebView = {
-       let configuration = WKWebViewConfiguration()
+        
+        let preference = WKWebpagePreferences()
+        preference.allowsContentJavaScript = true
+        let configuration = WKWebViewConfiguration()
+        configuration.defaultWebpagePreferences = preference
         configuration.allowsInlineMediaPlayback = true
         let webvideo = WKWebView(frame: .zero, configuration: configuration)
+        webvideo.translatesAutoresizingMaskIntoConstraints = false
+           webvideo.backgroundColor = .black
+           webvideo.isOpaque = false
+           webvideo.scrollView.backgroundColor = .black
         return webvideo
     }()
     
@@ -21,7 +29,7 @@ class previewViewController: UIViewController, WKNavigationDelegate {
     let webView : UIView = {
        let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .clear
         return view
     }()
     
@@ -60,6 +68,9 @@ class previewViewController: UIViewController, WKNavigationDelegate {
         view.addSubview(title1)
         view.addSubview(description1)
         view.addSubview(downloadbtn)
+        web.backgroundColor = .black
+        web.isOpaque = false
+        web.scrollView.backgroundColor = .black
         web.navigationDelegate = self
         applyconstraint()
     }
@@ -72,28 +83,30 @@ class previewViewController: UIViewController, WKNavigationDelegate {
     
 
     func applyconstraint() {
-        NSLayoutConstraint.activate([webView.topAnchor.constraint(equalTo: view.topAnchor, constant: 10),
-                                     webView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
-                                     webView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
-                                     webView.heightAnchor.constraint(equalToConstant: 300)
-                                    ])
         
-        NSLayoutConstraint.activate([title1.topAnchor.constraint(equalTo: webView.bottomAnchor, constant: 10),
-                                     title1.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
-                                     title1.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10)
-                                    ])
+        NSLayoutConstraint.activate([
+            
+            webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant:20),
+                                         webView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
+                                         webView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
+                                         webView.heightAnchor.constraint(equalToConstant: 350),
+            
+            title1.topAnchor.constraint(equalTo: webView.bottomAnchor, constant: 10),
+                                         title1.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
+                                         title1.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
+            
+            description1.topAnchor.constraint(equalTo: title1.bottomAnchor, constant: 8),
+                                         description1.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
+                                         description1.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
+            
+            downloadbtn.topAnchor.constraint(equalTo: description1.bottomAnchor, constant: 15),
+                                         downloadbtn.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 30),
+                                         downloadbtn.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -30),
+                                         downloadbtn.heightAnchor.constraint(equalToConstant: 60)
+            
+            ])
         
-        NSLayoutConstraint.activate([description1.topAnchor.constraint(equalTo: title1.bottomAnchor, constant: 8),
-                                     description1.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
-                                     description1.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10)
-                                    ])
-        
-        NSLayoutConstraint.activate([downloadbtn.topAnchor.constraint(equalTo: description1.bottomAnchor, constant: 15),
-                                     downloadbtn.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 30),
-                                     downloadbtn.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -30),
-                                     downloadbtn.heightAnchor.constraint(equalToConstant: 60)
-                                    ])
-    }
+            }
     
     
     func databinding(_ data :Movie , youtubeVideoData : VideoElement) {

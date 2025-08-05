@@ -7,22 +7,88 @@
 
 import UIKit
 
-enum Sections : Int {
+//enum Sections : Int {
+//    
+//    case trendingMovies = 0
+//    case trendingTv = 1
+//    case popularTv = 2
+//    case TopratedTv = 3
+//    case upcomingMovies = 4
+//    
+//}
+
+enum Sections  {
     
-    case trendingMovies = 0
-    case trendingTv = 1
-    case popularTv = 2
-    case TopratedTv = 3
-    case upcomingMovies = 4
-    
+    case trendingMovies(data : MovieResponse)
+    case trendingTv(data : MovieResponse)
+    case popularTv( data : MovieResponse)
+    case TopratedTv( data : MovieResponse)
+    case upcomingMovies( data : MovieResponse)
+    var title : String {
+        switch self {
+        case .trendingMovies :
+            return "Trending Movies"
+        case .trendingTv:
+            return "Trending Tv"
+        case .popularTv:
+            return "Popular Tv"
+        case .TopratedTv :
+            return "Top Rated Tv"
+        case .upcomingMovies:
+            return "Upcoming Movies"
+        }
+    }
+    var url : String {
+        
+        switch self {
+            
+        case .trendingMovies :
+            return "\(Constant.movieBaseUrl)\(Constant.trendingMovies)\(Constant.movieApiKey)"
+        case .trendingTv:
+            return "\(Constant.movieBaseUrl)\(Constant.trendingTv)\(Constant.movieApiKey)"
+        case .popularTv:
+            return "\(Constant.movieBaseUrl)\(Constant.popular)\(Constant.movieApiKey)\(Constant.mulit)"
+        case .TopratedTv :
+            return "\(Constant.movieBaseUrl)\(Constant.topRatedTv)\(Constant.movieApiKey)\(Constant.mulit)"
+        case .upcomingMovies:
+            return "\(Constant.movieBaseUrl)\(Constant.upcomingMovies)\(Constant.movieApiKey)\(Constant.mulit)"
+            
+        }
+    }
 }
 
+enum Endpoint {
+    
+    case trendingMovies
+    case trendingTv
+    case popularTv
+    case TopratedTv
+    case upcomingMovies
+    
+    var url : String {
+        switch self {
+        case .trendingMovies :
+            return "\(Constant.movieBaseUrl)\(Constant.trendingMovies)\(Constant.movieApiKey)"
+        case .trendingTv:
+            return "\(Constant.movieBaseUrl)\(Constant.trendingTv)\(Constant.movieApiKey)"
+        case .popularTv:
+            return "\(Constant.movieBaseUrl)\(Constant.popular)\(Constant.movieApiKey)\(Constant.mulit)"
+        case .TopratedTv :
+            return "\(Constant.movieBaseUrl)\(Constant.topRatedTv)\(Constant.movieApiKey)\(Constant.mulit)"
+        case .upcomingMovies:
+            return "\(Constant.movieBaseUrl)\(Constant.upcomingMovies)\(Constant.movieApiKey)\(Constant.mulit)"
+            
+        }
+    }
+    
+}
 
 class HomeViewController: UIViewController {
     
     var movieList : [Movie]?
     var headerView : movieHeader?
     var sectionsList :  [String] = ["Trending Movies","Trending Tv","Popular Tv","Top Rated Tv","Upcoming Movies"]
+    var sectionData = [Sections]()
    
     let homeTableView : UITableView = {
         let tableview = UITableView(frame: .zero, style: .grouped)
@@ -44,7 +110,86 @@ class HomeViewController: UIViewController {
         homeTableView.tableHeaderView = headerView
         setupNavigationBar()
         scrollData()
+        fetchData()
     }
+    
+    func fetchData() {
+        
+        let group = DispatchGroup()
+        group.enter()
+        group.enter()
+        group.enter()
+        group.enter()
+        group.enter()
+        
+
+            serviceHandler.shared.movieListApiCall(url: Endpoint.trendingMovies.url) { [weak self] (response : Result<MovieResponse,Error>) in
+                switch response {
+                case .success(let results) :
+                    group.leave()
+                    self?.sectionData.append(.trendingMovies(data: results))
+                case .failure(let error) :
+                    print(error.localizedDescription)
+                
+                }
+            }
+            
+        serviceHandler.shared.movieListApiCall(url: Endpoint.trendingTv.url) { [weak self] (response : Result<MovieResponse,Error>) in
+            switch response {
+            case .success(let results) :
+                group.leave()
+                self?.sectionData.append(.trendingTv(data: results))
+            case .failure(let error) :
+                print(error.localizedDescription)
+            
+            }
+        }
+        
+        
+        serviceHandler.shared.movieListApiCall(url: Endpoint.popularTv.url) { [weak self] (response : Result<MovieResponse,Error>) in
+            switch response {
+            case .success(let results) :
+                group.leave()
+                self?.sectionData.append(.popularTv(data: results))
+            case .failure(let error) :
+                print(error.localizedDescription)
+            
+            }
+        }
+        
+        serviceHandler.shared.movieListApiCall(url: Endpoint.TopratedTv.url) { [weak self] (response : Result<MovieResponse,Error>) in
+            switch response {
+            case .success(let results) :
+                group.leave()
+                self?.sectionData.append(.TopratedTv(data: results))
+            case .failure(let error) :
+                print(error.localizedDescription)
+            
+            }
+        }
+        
+        serviceHandler.shared.movieListApiCall(url: Endpoint.upcomingMovies.url) { [weak self] (response : Result<MovieResponse,Error>) in
+            switch response {
+            case .success(let results) :
+                group.leave()
+                self?.sectionData.append(.upcomingMovies(data: results))
+            case .failure(let error) :
+                print(error.localizedDescription)
+            
+            }
+        }
+        
+        
+        group.notify(queue: .main) {
+            self.homeTableView.reloadData()
+        }
+            
+  
+        
+    }
+    
+    
+  
     
     func scrollData() {
         
@@ -107,87 +252,45 @@ extension HomeViewController : UITableViewDelegate, UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "HomeTableViewCell", for: indexPath) as! HomeTableViewCell
-        switch indexPath.section {
-            
-        case Sections.trendingMovies.rawValue :
-            let url = "\(Constant.movieBaseUrl)\(Constant.trendingMovies)\(Constant.movieApiKey)"
-            
-            serviceHandler.shared.movieListApiCall(url: url) { (response : Result<MovieResponse,Error>) in
-                switch response {
-                case .success(let results) :
-                    cell.databinding(results.results)
-                    cell.delegate = self
-                case .failure(let error) :
-                    print(error.localizedDescription)
-                
-                }
+        
+        let type = sectionData[indexPath.section]
+        
+        switch type {
+        case .trendingMovies(data: let data) :
+            DispatchQueue.main.async {
+                cell.databinding(data.results)
+                cell.delegate = self
             }
-            
-            
-            
-        case Sections.trendingTv.rawValue :
-            let url = "\(Constant.movieBaseUrl)\(Constant.trendingTv)\(Constant.movieApiKey)"
-            
-            serviceHandler.shared.movieListApiCall(url: url) { (response : Result<MovieResponse,Error>) in
-                switch response {
-                case .success(let results) :
-                    cell.databinding(results.results)
-                    cell.delegate = self
-                case .failure(let error) :
-                    print(error.localizedDescription)
-                
-                }
+           
+        case .trendingTv(data: let data) :
+            DispatchQueue.main.async {
+                cell.databinding(data.results)
+                cell.delegate = self
             }
-            
-            
-        case Sections.popularTv.rawValue :
-            let url = "\(Constant.movieBaseUrl)\(Constant.popular)\(Constant.movieApiKey)\(Constant.mulit)"
-            
-            serviceHandler.shared.movieListApiCall(url: url) { (response : Result<MovieResponse,Error>) in
-                switch response {
-                case .success(let results) :
-                    cell.databinding(results.results)
-                    cell.delegate = self
-                case .failure(let error) :
-                    print(error.localizedDescription)
-                
-                }
+           
+        case .popularTv(data: let data) :
+            DispatchQueue.main.async {
+                cell.databinding(data.results)
+                cell.delegate = self
             }
-            
-        case Sections.TopratedTv.rawValue :
-            let url = "\(Constant.movieBaseUrl)\(Constant.topRatedTv)\(Constant.movieApiKey)\(Constant.mulit)"
-            
-            serviceHandler.shared.movieListApiCall(url: url) { (response : Result<MovieResponse,Error>) in
-                switch response {
-                case .success(let results) :
-                    cell.databinding(results.results)
-                    cell.delegate = self
-                case .failure(let error) :
-                    print(error.localizedDescription)
-                
-                }
+           
+        case .TopratedTv(data: let data) :
+            DispatchQueue.main.async {
+                cell.databinding(data.results)
+                cell.delegate = self
             }
-            
-            
-        case Sections.upcomingMovies.rawValue :
-            let url = "\(Constant.movieBaseUrl)\(Constant.upcomingMovies)\(Constant.movieApiKey)\(Constant.mulit)"
-            
-            serviceHandler.shared.movieListApiCall(url: url) { (response : Result<MovieResponse,Error>) in
-                switch response {
-                case .success(let results) :
-                    cell.databinding(results.results)
-                    cell.delegate = self
-                case .failure(let error) :
-                    print(error.localizedDescription)
-                
-                }
+           
+        case .upcomingMovies(data: let data) :
+            DispatchQueue.main.async {
+                cell.databinding(data.results)
+                cell.delegate = self
             }
-            
-        default :
-            break
-            
+           
         }
         return cell
+        
+     
+       
     }
     
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
@@ -196,7 +299,7 @@ extension HomeViewController : UITableViewDelegate, UITableViewDataSource {
         
         let headerlable = UILabel()
         headerlable.translatesAutoresizingMaskIntoConstraints = false
-        headerlable.text = sectionsList[section]
+        headerlable.text = sectionData[section].title
         headerlable.font = .preferredFont(forTextStyle: .body)
         headerlable.textColor = .white
         headerView.addSubview(headerlable)

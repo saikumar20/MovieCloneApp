@@ -53,6 +53,7 @@ class DownloadedData {
     func getData(competion : @escaping((Result<[MovieDownloadData],Error>)->Void)) {
 
         let request = MovieDownloadData.fetchRequest()
+       
         let context = (UIApplication.shared.delegate as? AppDelegate)?.persistentContainer.viewContext
         
         do{
