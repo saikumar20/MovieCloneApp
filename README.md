@@ -2,7 +2,7 @@ A  Netflix-style movie streaming app built with UIKit, WebKit, and TMDb API (The
 
 ## 📸 Demo :
 
- [App Video]https://www.youtube.com/shorts/viF6WUm47OQ)
+ https://www.youtube.com/shorts/viF6WUm47OQ
 
 🔥 Trending Movies & TV Shows
 
