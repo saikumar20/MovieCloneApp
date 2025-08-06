@@ -1,6 +1,6 @@
 A  Netflix-style movie streaming app built with UIKit, WebKit, and TMDb API (The Movie Database). This app mimics the UI/UX of Netflix with a focus on trending, top-rated, and upcoming movies and TV shows.trailer integration using the YouTube API
 
-Demo Video :
+## 📸 Demo :
            [App Video](https://www.youtube.com/shorts/viF6WUm47OQ)
 
 🔥 Trending Movies & TV Shows
