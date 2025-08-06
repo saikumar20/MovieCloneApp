@@ -240,6 +240,7 @@ class HomeViewController: UIViewController {
 
 extension HomeViewController : UITableViewDelegate, UITableViewDataSource {
     func numberOfSections(in tableView: UITableView) -> Int {
+      
         return sectionsList.count
     }
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -252,6 +253,8 @@ extension HomeViewController : UITableViewDelegate, UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "HomeTableViewCell", for: indexPath) as! HomeTableViewCell
+        
+     //   guard sectionData.count > 0 else {return UITableViewCell()}
         
         let type = sectionData[indexPath.section]
         
@@ -294,6 +297,9 @@ extension HomeViewController : UITableViewDelegate, UITableViewDataSource {
     }
     
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        
+     //   guard sectionData.count > 0 else {return UIView()}
+        
         let headerView = UIView()
         headerView.backgroundColor = .systemBackground
         
