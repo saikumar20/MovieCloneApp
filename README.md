@@ -37,7 +37,7 @@ Networking: URLSession + JSON Decoding
 
 Architecture: MVC
 
-![Image alt](https://github.com/saikumar20/MovieCloneApp/blob/9e0d080b462c356979eb27ac039a3300f471c99a/Simulator%20Screenshot%20-%20iPhone%2015%20Pro%20Max%20-%202025-08-06%20at%2008.02.37.png)
+
 
 
 
