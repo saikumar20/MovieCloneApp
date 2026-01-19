@@ -1,125 +1,160 @@
 //
-//  movieHeader.swift
-//  MovieCloneApp
-//
-//  Created by Test on 09/05/25.
-//
+//  MovieHeaderView.swift
+//  MovieCloneApp//
 
 import UIKit
 
-class movieHeader: UIView {
+class MovieHeaderView: UIView {
     
-    
-    var imageIndex : Int = 0
 
-    var movie : [Movie]? {
-        didSet {
-            DispatchQueue.main.async {
-                self.maincollectionview.reloadData()
-                self.pagecontroller.numberOfPages = self.movie?.count ?? 0
-            }
-        }
-    }
+    private var movies: [Movie] = []
+    private var currentIndex: Int = 0
+    private var autoScrollTimer: Timer?
     
-    var maincollectionview : UICollectionView = {
-        let collectionlayout = UICollectionViewFlowLayout()
-        collectionlayout.scrollDirection = .horizontal
-        collectionlayout.sectionInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
-        collectionlayout.minimumLineSpacing = 0
-        collectionlayout.minimumInteritemSpacing  = 0
-        let collectionview = UICollectionView(frame: .zero, collectionViewLayout: collectionlayout)
-        collectionview.translatesAutoresizingMaskIntoConstraints = false
-        collectionview.register(scrollCollectionViewCell.self, forCellWithReuseIdentifier: "scrollCollectionViewCell")
-        return collectionview
+
+    private lazy var collectionView: UICollectionView = {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .horizontal
+        layout.minimumLineSpacing = 0
+        layout.minimumInteritemSpacing = 0
+        layout.sectionInset = .zero
+        
+        let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        cv.translatesAutoresizingMaskIntoConstraints = false
+        cv.isPagingEnabled = true
+        cv.showsHorizontalScrollIndicator = false
+        cv.backgroundColor = .clear
+        cv.register(MoviePosterCell.self, forCellWithReuseIdentifier: MoviePosterCell.identifier)
+        cv.delegate = self
+        cv.dataSource = self
+        
+        return cv
     }()
     
-    var pagecontroller : UIPageControl = {
-       let controller = UIPageControl()
-        controller.currentPage = 0
-        controller.translatesAutoresizingMaskIntoConstraints = false
-//        controller.addTarget(self, action: #selector(pagecontrollerChanged(_ :)), for: .valueChanged)
-        return controller
+    private lazy var pageControl: UIPageControl = {
+        let pc = UIPageControl()
+        pc.translatesAutoresizingMaskIntoConstraints = false
+        pc.currentPage = 0
+        pc.pageIndicatorTintColor = .systemGray
+        pc.currentPageIndicatorTintColor = .white
+        pc.isUserInteractionEnabled = false
+        return pc
     }()
     
+
     override init(frame: CGRect) {
         super.init(frame: frame)
-        addSubview(maincollectionview)
-        addSubview(pagecontroller)
-        applyconstraint()
-        maincollectionview.delegate = self
-        maincollectionview.dataSource = self
-        Timer.scheduledTimer(timeInterval: 2.0, target: self, selector: #selector(autoscroller), userInfo: nil, repeats: true)
-    }
-    
-    
-//    @objc func pagecontrollerChanged(_ sender : UIPageControl) {
-//        
-//        let selectedIndex = IndexPath(item: sender.currentPage, section: 0)
-//        self.maincollectionview.scrollToItem(at: selectedIndex, at: .centeredHorizontally, animated: true)
-//        
-//    }
-    
-    @objc func autoscroller() {
-        
-        if imageIndex < (self.movie?.count ?? 0) - 1 {
-            imageIndex += 1
-            self.pagecontroller.currentPage = self.imageIndex
-            maincollectionview.scrollToItem(at: IndexPath(row: imageIndex, section: 0), at: .right, animated: true)
-        }else {
-            imageIndex = 0
-            self.pagecontroller.currentPage = self.imageIndex
-            
-            if movie?.count ?? 0 > 0 {
-                maincollectionview.scrollToItem(at: IndexPath(row: imageIndex, section: 0), at: .right, animated: true)
-
-            }
-        }
-            
-    }
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        if let layouts = self.maincollectionview.collectionViewLayout as? UICollectionViewFlowLayout {
-            layouts.itemSize = CGSize(width: bounds.width, height: 400)
-        }
+        setupUI()
+        setupAutoScroll()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func applyconstraint() {
-       NSLayoutConstraint.activate([maincollectionview.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 0),maincollectionview.trailingAnchor.constraint(equalTo: trailingAnchor, constant: 0),maincollectionview.topAnchor.constraint(equalTo: topAnchor, constant: 0),maincollectionview.bottomAnchor.constraint(equalTo: bottomAnchor, constant: 0)])
-        
-        
-        NSLayoutConstraint.activate([pagecontroller.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 0),pagecontroller.trailingAnchor.constraint(equalTo: trailingAnchor, constant: 0),pagecontroller.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -5)])
-        
+    deinit {
+        stopAutoScroll()
     }
     
+
+    private func setupUI() {
+        backgroundColor = .systemBackground
+        
+        addSubview(collectionView)
+        addSubview(pageControl)
+        
+        NSLayoutConstraint.activate([
+            collectionView.topAnchor.constraint(equalTo: topAnchor),
+            collectionView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            collectionView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            collectionView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            
+            pageControl.leadingAnchor.constraint(equalTo: leadingAnchor),
+            pageControl.trailingAnchor.constraint(equalTo: trailingAnchor),
+            pageControl.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -16)
+        ])
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        if let layout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout {
+            layout.itemSize = bounds.size
+        }
+    }
+    
+
+    func configure(with movies: [Movie]) {
+        self.movies = movies
+        pageControl.numberOfPages = movies.count
+        collectionView.reloadData()
+    }
+    
+
+    private func setupAutoScroll() {
+        autoScrollTimer = Timer.scheduledTimer(
+            timeInterval: 3.0,
+            target: self,
+            selector: #selector(autoScroll),
+            userInfo: nil,
+            repeats: true
+        )
+    }
+    
+    private func stopAutoScroll() {
+        autoScrollTimer?.invalidate()
+        autoScrollTimer = nil
+    }
+    
+    @objc private func autoScroll() {
+        guard !movies.isEmpty else { return }
+        
+        currentIndex = (currentIndex + 1) % movies.count
+        pageControl.currentPage = currentIndex
+        
+        let indexPath = IndexPath(item: currentIndex, section: 0)
+        collectionView.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: true)
+    }
 }
 
 
-extension movieHeader : UICollectionViewDelegate,UICollectionViewDataSource {
-    
-    func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return 1
-    }
+extension MovieHeaderView: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return movie?.count ?? 0
-    }
-    
-    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        let index : CGFloat = (maincollectionview.contentOffset.x / maincollectionview.frame.width)
-        self.imageIndex = Int(index)
-        self.pagecontroller.currentPage = Int(index)
+        return movies.count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "scrollCollectionViewCell", for: indexPath) as! scrollCollectionViewCell
-        cell.databinding(movie?[indexPath.row].poster_path ?? "")
+        guard let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: MoviePosterCell.identifier,
+            for: indexPath
+        ) as? MoviePosterCell else {
+            return UICollectionViewCell()
+        }
+        
+        let movie = movies[indexPath.item]
+        cell.configure(with: movie.poster_path)
+        
         return cell
     }
+}
+
+
+extension MovieHeaderView: UICollectionViewDelegate {
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        let pageWidth = scrollView.frame.width
+        let newIndex = Int(scrollView.contentOffset.x / pageWidth)
+        
+        if newIndex != currentIndex {
+            currentIndex = newIndex
+            pageControl.currentPage = newIndex
+        }
+    }
     
-   
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        stopAutoScroll()
+    }
     
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        setupAutoScroll()
+    }
 }

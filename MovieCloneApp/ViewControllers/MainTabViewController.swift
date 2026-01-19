@@ -13,8 +13,8 @@ class MainTabViewController: UITabBarController {
         super.viewDidLoad()
         
         let vc1 = UINavigationController(rootViewController: HomeViewController())
-        let vc2 = UINavigationController(rootViewController: upcomingViewController())
-        let vc3 = UINavigationController(rootViewController: searchViewController())
+        let vc2 = UINavigationController(rootViewController: UpcomingViewController())
+        let vc3 = UINavigationController(rootViewController: SearchViewController())
         let vc4 = UINavigationController(rootViewController: DownloadViewController())
         
         vc1.tabBarItem.image = UIImage(systemName: "house")

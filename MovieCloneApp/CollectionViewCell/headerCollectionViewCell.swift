@@ -21,7 +21,6 @@ class headerCollectionViewCell: UICollectionViewCell {
     override init(frame: CGRect) {
         super.init(frame: frame)
         contentView.addSubview(images)
-//        applyconstriaint()
     }
     
     required init?(coder: NSCoder) {

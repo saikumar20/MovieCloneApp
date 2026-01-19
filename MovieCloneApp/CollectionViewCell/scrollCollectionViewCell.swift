@@ -1,42 +1,69 @@
-//
-//  scrollCollectionViewCell.swift
-//  MovieCloneApp
-//
-//  Created by Test on 09/05/25.
-//
-
 import UIKit
-import SDWebImage
 
-class scrollCollectionViewCell: UICollectionViewCell {
+class MoviePosterCell: UICollectionViewCell {
     
-    var scrollimage : UIImageView = {
-        let image = UIImageView()
-        image.contentMode = .scaleToFill
-        image.translatesAutoresizingMaskIntoConstraints = false
-        image.clipsToBounds = true
-        return image
+    // MARK: - Properties
+    static let identifier = "MoviePosterCell"
+    
+    // MARK: - UI Components
+    private let posterImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.backgroundColor = .systemGray6
+        return imageView
     }()
     
+    private let gradientLayer: CAGradientLayer = {
+        let layer = CAGradientLayer()
+        layer.colors = [
+            UIColor.clear.cgColor,
+            UIColor.black.withAlphaComponent(0.7).cgColor
+        ]
+        layer.locations = [0.5, 1.0]
+        return layer
+    }()
+    
+    // MARK: - Initialization
     override init(frame: CGRect) {
         super.init(frame: frame)
-        contentView.addSubview(scrollimage)
-        applyConstratin()
-    }
-    
-    func applyConstratin() {
-        let imageConstraint = [scrollimage.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: 0),scrollimage.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 0),scrollimage.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 0),scrollimage.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: 0)]
-        NSLayoutConstraint.activate(imageConstraint)
+        setupUI()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func databinding(_ data : String?) {
-        guard let url = URL(string: "https://image.tmdb.org/t/p/w500\(String(describing: data ?? ""))") else { return }
-        scrollimage.sd_setImage(with: url, placeholderImage: UIImage(named: ""), context: nil)
-        
+    // MARK: - Setup
+    private func setupUI() {
+        contentView.addSubview(posterImageView)
+        posterImageView.layer.addSublayer(gradientLayer)
     }
     
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        posterImageView.frame = contentView.bounds
+        gradientLayer.frame = posterImageView.bounds
+    }
+    
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        posterImageView.image = nil
+        posterImageView.sd_cancelCurrentImageLoad()
+    }
+    
+    // MARK: - Configuration
+    func configure(with posterPath: String?) {
+        guard let posterPath = posterPath,
+              let url = URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)") else {
+            posterImageView.image = nil
+            return
+        }
+        
+        posterImageView.sd_setImage(
+            with: url,
+            placeholderImage: nil,
+            options: [.continueInBackground, .retryFailed]
+        )
+    }
 }

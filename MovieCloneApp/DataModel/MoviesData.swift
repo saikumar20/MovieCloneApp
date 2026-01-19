@@ -1,9 +1,4 @@
-//
-//  MoviesData.swift
-//  MovieCloneApp
-//
-//  Created by Test on 06/05/25.
-//
+
 
 import Foundation
 

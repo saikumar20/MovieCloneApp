@@ -108,7 +108,7 @@ extension homeHeaderView : UICollectionViewDelegate , UICollectionViewDataSource
         let stringurl = movieList?[indexPath.row].poster_path ?? ""
         
         if let url = URL(string: "https://image.tmdb.org/t/p/w500\(stringurl)") {
-            cell.images.sd_setImage(with: url, placeholderImage: UIImage(named: ""))
+            cell.images.sd_setImage(with: url, placeholderImage: UIImage(named: "photoplaceholder"))
         }
         return cell
         

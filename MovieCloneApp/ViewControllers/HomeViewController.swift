@@ -1,316 +1,228 @@
-//
-//  HomeViewController.swift
-//  MovieCloneApp
-//
-//  Created by Test on 06/05/25.
-//
 
 import UIKit
 
-//enum Sections : Int {
-//    
-//    case trendingMovies = 0
-//    case trendingTv = 1
-//    case popularTv = 2
-//    case TopratedTv = 3
-//    case upcomingMovies = 4
-//    
-//}
-
-enum Sections  {
+enum MovieEndpoint {
+    case trendingMovies
+    case trendingTV
+    case popularTV
+    case topRatedTV
+    case upcomingMovies
     
-    case trendingMovies(data : MovieResponse)
-    case trendingTv(data : MovieResponse)
-    case popularTv( data : MovieResponse)
-    case TopratedTv( data : MovieResponse)
-    case upcomingMovies( data : MovieResponse)
-    var title : String {
+    var title: String {
         switch self {
-        case .trendingMovies :
-            return "Trending Movies"
-        case .trendingTv:
-            return "Trending Tv"
-        case .popularTv:
-            return "Popular Tv"
-        case .TopratedTv :
-            return "Top Rated Tv"
-        case .upcomingMovies:
-            return "Upcoming Movies"
+        case .trendingMovies: return "Trending Movies"
+        case .trendingTV: return "Trending TV"
+        case .popularTV: return "Popular TV"
+        case .topRatedTV: return "Top Rated TV"
+        case .upcomingMovies: return "Upcoming Movies"
         }
     }
-    var url : String {
+    
+    var url: String {
+        let baseURL = Constant.movieBaseUrl
+        let apiKey = Constant.movieApiKey
+        let multi = Constant.mulit
         
         switch self {
-            
-        case .trendingMovies :
-            return "\(Constant.movieBaseUrl)\(Constant.trendingMovies)\(Constant.movieApiKey)"
-        case .trendingTv:
-            return "\(Constant.movieBaseUrl)\(Constant.trendingTv)\(Constant.movieApiKey)"
-        case .popularTv:
-            return "\(Constant.movieBaseUrl)\(Constant.popular)\(Constant.movieApiKey)\(Constant.mulit)"
-        case .TopratedTv :
-            return "\(Constant.movieBaseUrl)\(Constant.topRatedTv)\(Constant.movieApiKey)\(Constant.mulit)"
+        case .trendingMovies:
+            return "\(baseURL)\(Constant.trendingMovies)\(apiKey)"
+        case .trendingTV:
+            return "\(baseURL)\(Constant.trendingTv)\(apiKey)"
+        case .popularTV:
+            return "\(baseURL)\(Constant.popular)\(apiKey)\(multi)"
+        case .topRatedTV:
+            return "\(baseURL)\(Constant.topRatedTv)\(apiKey)\(multi)"
         case .upcomingMovies:
-            return "\(Constant.movieBaseUrl)\(Constant.upcomingMovies)\(Constant.movieApiKey)\(Constant.mulit)"
-            
+            return "\(baseURL)\(Constant.upcomingMovies)\(apiKey)\(multi)"
         }
     }
 }
 
-enum Endpoint {
+// MARK: - Section Model
+struct MovieSection {
+    let endpoint: MovieEndpoint
+    let movies: [Movie]
     
-    case trendingMovies
-    case trendingTv
-    case popularTv
-    case TopratedTv
-    case upcomingMovies
-    
-    var url : String {
-        switch self {
-        case .trendingMovies :
-            return "\(Constant.movieBaseUrl)\(Constant.trendingMovies)\(Constant.movieApiKey)"
-        case .trendingTv:
-            return "\(Constant.movieBaseUrl)\(Constant.trendingTv)\(Constant.movieApiKey)"
-        case .popularTv:
-            return "\(Constant.movieBaseUrl)\(Constant.popular)\(Constant.movieApiKey)\(Constant.mulit)"
-        case .TopratedTv :
-            return "\(Constant.movieBaseUrl)\(Constant.topRatedTv)\(Constant.movieApiKey)\(Constant.mulit)"
-        case .upcomingMovies:
-            return "\(Constant.movieBaseUrl)\(Constant.upcomingMovies)\(Constant.movieApiKey)\(Constant.mulit)"
-            
-        }
+    var title: String {
+        endpoint.title
     }
-    
 }
 
 class HomeViewController: UIViewController {
     
-    var movieList : [Movie]?
-    var headerView : movieHeader?
-    var sectionsList :  [String] = ["Trending Movies","Trending Tv","Popular Tv","Top Rated Tv","Upcoming Movies"]
-    var sectionData = [Sections]()
-   
-    let homeTableView : UITableView = {
-        let tableview = UITableView(frame: .zero, style: .grouped)
-        tableview.translatesAutoresizingMaskIntoConstraints = false
-        tableview.separatorStyle = .none
-        tableview.register(HomeTableViewCell.self, forCellReuseIdentifier: "HomeTableViewCell")
-        tableview.register(headerTableViewCell.self, forCellReuseIdentifier: "headerTableViewCell")
-        return tableview
-    }()
+  
+        private var sections: [MovieSection] = []
+        private var headerMovies: [Movie] = []
+        private let endpoints: [MovieEndpoint] = [
+            .trendingMovies,
+            .trendingTV,
+            .popularTV,
+            .topRatedTV,
+            .upcomingMovies
+        ]
     
-
+        private lazy var homeTableView: UITableView = {
+            let tableView = UITableView(frame: .zero, style: .grouped)
+            tableView.translatesAutoresizingMaskIntoConstraints = false
+            tableView.separatorStyle = .none
+            tableView.backgroundColor = .systemBackground
+            tableView.register(HomeTableViewCell.self, forCellReuseIdentifier: HomeTableViewCell.identifier)
+            tableView.delegate = self
+            tableView.dataSource = self
+            return tableView
+        }()
+    
+    private lazy var headerView: MovieHeaderView = {
+           let header = MovieHeaderView(frame: CGRect(x: 0, y: 0, width: view.bounds.width, height: 400))
+           return header
+       }()
+    
+ 
     override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .systemBackground
-        view.addSubview(homeTableView)
-        homeTableView.delegate = self
-        homeTableView.dataSource = self
-        headerView = movieHeader(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 400))
-        homeTableView.tableHeaderView = headerView
-        setupNavigationBar()
-        scrollData()
-        fetchData()
-    }
+            super.viewDidLoad()
+            setupUI()
+            setupNavigationBar()
+            fetchAllData()
+        }
+        
+        override func viewDidLayoutSubviews() {
+            super.viewDidLayoutSubviews()
+            homeTableView.frame = view.bounds
+        }
     
-    func fetchData() {
-        
-        let group = DispatchGroup()
-        group.enter()
-        group.enter()
-        group.enter()
-        group.enter()
-        group.enter()
-        
+    
+   
+       private func setupUI() {
+           view.backgroundColor = .systemBackground
+           view.addSubview(homeTableView)
+           homeTableView.tableHeaderView = headerView
+           
+           NSLayoutConstraint.activate([
+               homeTableView.topAnchor.constraint(equalTo: view.topAnchor),
+               homeTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+               homeTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+               homeTableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+           ])
+       }
+    
+    private func setupNavigationBar() {
+           guard let logoImage = UIImage(named: "netflixLogo")?.withRenderingMode(.alwaysOriginal) else {
+               return
+           }
+           
+           navigationItem.leftBarButtonItem = UIBarButtonItem(
+               image: logoImage,
+               style: .plain,
+               target: nil,
+               action: nil
+           )
+           
+           navigationItem.rightBarButtonItems = [
+               UIBarButtonItem(image: UIImage(systemName: "person"), style: .plain, target: nil, action: nil),
+               UIBarButtonItem(image: UIImage(systemName: "play.rectangle"), style: .plain, target: nil, action: nil)
+           ]
+           
+           navigationController?.navigationBar.tintColor = .white
+           navigationController?.navigationBar.backgroundColor = .clear
+       }
+    
 
-            serviceHandler.shared.movieListApiCall(url: Endpoint.trendingMovies.url) { [weak self] (response : Result<MovieResponse,Error>) in
-                switch response {
-                case .success(let results) :
-                    group.leave()
-                    self?.sectionData.append(.trendingMovies(data: results))
-                case .failure(let error) :
-                    print(error.localizedDescription)
-                
+        private func fetchAllData() {
+            let dispatchGroup = DispatchGroup()
+            var fetchedSections: [MovieSection] = []
+            let sectionsLock = NSLock()
+            
+           
+            dispatchGroup.enter()
+            fetchMovies(for: .trendingMovies) { [weak self] result in
+                defer { dispatchGroup.leave() }
+                if case .success(let response) = result {
+                    self?.headerMovies = response.results ?? []
+                    DispatchQueue.main.async {
+                        self?.headerView.configure(with: response.results ?? [])
+                    }
                 }
             }
             
-        serviceHandler.shared.movieListApiCall(url: Endpoint.trendingTv.url) { [weak self] (response : Result<MovieResponse,Error>) in
-            switch response {
-            case .success(let results) :
-                group.leave()
-                self?.sectionData.append(.trendingTv(data: results))
-            case .failure(let error) :
-                print(error.localizedDescription)
+        
+            for endpoint in endpoints {
+                dispatchGroup.enter()
+                fetchMovies(for: endpoint) { result in
+                    defer { dispatchGroup.leave() }
+                    if case .success(let response) = result {
+                        let section = MovieSection(endpoint: endpoint, movies: response.results ?? [])
+                        sectionsLock.lock()
+                        fetchedSections.append(section)
+                        sectionsLock.unlock()
+                    }
+                }
+            }
             
+            dispatchGroup.notify(queue: .main) { [weak self] in
+        
+                self?.sections = self?.endpoints.compactMap { endpoint in
+                    fetchedSections.first { $0.endpoint.title == endpoint.title }
+                } ?? []
+                self?.homeTableView.reloadData()
             }
         }
-        
-        
-        serviceHandler.shared.movieListApiCall(url: Endpoint.popularTv.url) { [weak self] (response : Result<MovieResponse,Error>) in
-            switch response {
-            case .success(let results) :
-                group.leave()
-                self?.sectionData.append(.popularTv(data: results))
-            case .failure(let error) :
-                print(error.localizedDescription)
-            
-            }
-        }
-        
-        serviceHandler.shared.movieListApiCall(url: Endpoint.TopratedTv.url) { [weak self] (response : Result<MovieResponse,Error>) in
-            switch response {
-            case .success(let results) :
-                group.leave()
-                self?.sectionData.append(.TopratedTv(data: results))
-            case .failure(let error) :
-                print(error.localizedDescription)
-            
-            }
-        }
-        
-        serviceHandler.shared.movieListApiCall(url: Endpoint.upcomingMovies.url) { [weak self] (response : Result<MovieResponse,Error>) in
-            switch response {
-            case .success(let results) :
-                group.leave()
-                self?.sectionData.append(.upcomingMovies(data: results))
-            case .failure(let error) :
-                print(error.localizedDescription)
-            
-            }
-        }
-        
-        
-        group.notify(queue: .main) {
-            self.homeTableView.reloadData()
-        }
-            
+    
+    private func fetchMovies(for endpoint: MovieEndpoint, completion: @escaping (Result<MovieResponse, Error>) -> Void) {
+           serviceHandler.shared.movieListApiCall(url: endpoint.url, completion: completion)
+       }
   
-        
-    }
-    
-    
-  
-    
-    func scrollData() {
-        
-        
-        
-        
-        let url = "\(Constant.movieBaseUrl)\(Constant.trendingMovies)\(Constant.movieApiKey)"
-        
-        serviceHandler.shared.movieListApiCall(url: url) { (response : Result<MovieResponse,Error>) in
-            switch response {
-            case .success(let results) :
-                self.headerView?.movie = results.results
-            case .failure(let error) :
-                print(error.localizedDescription)
-            
-            }
-        }
-        
-    }
-
-    
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        homeTableView.frame =  view.bounds
-    }
-    
-    
-    func setupNavigationBar() {
-      
-        var image = UIImage(named: "netflixLogo")
-        image = image?.withRenderingMode(.alwaysOriginal)
-        navigationItem.leftBarButtonItem = UIBarButtonItem(image: image, style: .plain, target: self, action: nil)
-        
-        navigationItem.rightBarButtonItems = [UIBarButtonItem(image: UIImage(systemName: "person"), style: .plain, target: self, action: nil),UIBarButtonItem(image: UIImage(systemName: "play.rectangle"), style: .plain, target: self, action: nil)]
-        
-        navigationController?.navigationBar.backgroundColor = .clear
-        
-        navigationController?.navigationBar.tintColor = .white
-        
-        
-    }
-   
-    
-
-    
 
 }
 
-extension HomeViewController : UITableViewDelegate, UITableViewDataSource {
+
+extension HomeViewController: UITableViewDataSource {
     func numberOfSections(in tableView: UITableView) -> Int {
-      
-        return sectionsList.count
+        return sections.count
     }
+    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return 1
     }
     
-    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        return 30
-    }
-
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "HomeTableViewCell", for: indexPath) as! HomeTableViewCell
-        
-     //   guard sectionData.count > 0 else {return UITableViewCell()}
-        
-        let type = sectionData[indexPath.section]
-        
-        switch type {
-        case .trendingMovies(data: let data) :
-            DispatchQueue.main.async {
-                cell.databinding(data.results)
-                cell.delegate = self
-            }
-           
-        case .trendingTv(data: let data) :
-            DispatchQueue.main.async {
-                cell.databinding(data.results)
-                cell.delegate = self
-            }
-           
-        case .popularTv(data: let data) :
-            DispatchQueue.main.async {
-                cell.databinding(data.results)
-                cell.delegate = self
-            }
-           
-        case .TopratedTv(data: let data) :
-            DispatchQueue.main.async {
-                cell.databinding(data.results)
-                cell.delegate = self
-            }
-           
-        case .upcomingMovies(data: let data) :
-            DispatchQueue.main.async {
-                cell.databinding(data.results)
-                cell.delegate = self
-            }
-           
+        guard let cell = tableView.dequeueReusableCell(
+            withIdentifier: HomeTableViewCell.identifier,
+            for: indexPath
+        ) as? HomeTableViewCell else {
+            return UITableViewCell()
         }
-        return cell
         
-     
-       
+        let section = sections[indexPath.section]
+        cell.configure(with: section.movies)
+        cell.delegate = self
+        
+        return cell
+    }
+}
+
+
+extension HomeViewController: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 40
     }
     
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        
-     //   guard sectionData.count > 0 else {return UIView()}
-        
         let headerView = UIView()
         headerView.backgroundColor = .systemBackground
         
-        let headerlable = UILabel()
-        headerlable.translatesAutoresizingMaskIntoConstraints = false
-        headerlable.text = sectionData[section].title
-        headerlable.font = .preferredFont(forTextStyle: .body)
-        headerlable.textColor = .white
-        headerView.addSubview(headerlable)
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.text = sections[section].title
+        label.font = .systemFont(ofSize: 18, weight: .semibold)
+        label.textColor = .white
         
-        NSLayoutConstraint.activate([headerlable.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 10),headerlable.rightAnchor.constraint(equalTo: headerView.rightAnchor, constant: -5),headerlable.topAnchor.constraint(equalTo: headerView.topAnchor, constant: 0),headerlable.bottomAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 0)])
+        headerView.addSubview(label)
+        
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
+            label.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
+            label.centerYAnchor.constraint(equalTo: headerView.centerYAnchor)
+        ])
         
         return headerView
     }
@@ -318,20 +230,15 @@ extension HomeViewController : UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         return 200
     }
-    
-    
 }
-extension HomeViewController : previewNavigation {
-    func selectedMovie(_ selectedmovie: Movie, _ data: VideoElement?) {
-        DispatchQueue.main.async {
-            let vc = previewViewController()
-            if let videodata = data {
-                vc.databinding(selectedmovie, youtubeVideoData: videodata)
-            }
-            self.navigationController?.pushViewController(vc, animated: true)
+extension HomeViewController : MovieSelectionDelegate {
+
+    
+    func didSelectMovie(_ movie: Movie, with video: VideoElement?) {
+            let previewVC = PreviewViewController()
+            previewVC.configure(with: movie, video: video)
+            navigationController?.pushViewController(previewVC, animated: true)
         }
-        
-    }
     
     
 }

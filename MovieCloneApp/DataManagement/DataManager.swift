@@ -1,144 +1,160 @@
-//
-//  DataManager.swift
-//  MovieCloneApp
-//
-//  Created by Test on 13/05/25.
-//
+
 
 import Foundation
 import CoreData
 import UIKit
 
-class DownloadedData {
+// MARK: - Database Errors
+enum DatabaseError: LocalizedError {
+    case failedToSave
+    case failedToFetch
+    case failedToDelete
+    case contextUnavailable
     
-    enum dataBaseErrors : Error {
-        case failToSave
-        case failToFetch
-        case failToDelete
-    }
-    
-    
-    static let shared = DownloadedData()
-    
-    
-    func saveData(_ movieData : Movie?, completion : @escaping((Result<Void,Error>) -> Void)) {
-        
-        guard let appdelegate = UIApplication.shared.delegate as? AppDelegate
-        else {return}
-        
-        let context = appdelegate.persistentContainer.viewContext
-        
-        let item = MovieDownloadData(context: context )
-        item.id = Int64(movieData?.id ?? 0)
-        item.name = movieData?.name
-        item.backdrop_path = movieData?.backdrop_path
-        item.original_name = movieData?.original_name
-        item.original_title =  movieData?.original_title
-        item.overview = movieData?.overview
-        item.popularity = movieData?.popularity ?? 0
-        item.poster_path = movieData?.poster_path
-        item.release_date = movieData?.release_date
-        item.title = movieData?.title
-        
-        do{
-            try context.save()
-            completion(.success(()))
-        }catch{
-            completion(.failure(dataBaseErrors.failToSave))
+    var errorDescription: String? {
+        switch self {
+        case .failedToSave: return "Failed to save data to database"
+        case .failedToFetch: return "Failed to fetch data from database"
+        case .failedToDelete: return "Failed to delete data from database"
+        case .contextUnavailable: return "Core Data context is unavailable"
         }
     }
-    
-    
-    
-    func getData(competion : @escaping((Result<[MovieDownloadData],Error>)->Void)) {
-
-        let request = MovieDownloadData.fetchRequest()
-       
-        let context = (UIApplication.shared.delegate as? AppDelegate)?.persistentContainer.viewContext
-        
-        do{
-            let data = try context?.fetch(request)
-            if let result = data {
-                competion(.success(result))
-            }
-        }catch {
-            competion(.failure(dataBaseErrors.failToFetch))
-        }
-       
-    }
-    
-    
-    func deleteData(_ data: MovieDownloadData,completion : @escaping((Result<Void,Error>)->Void)) {
-        
-        let context = (UIApplication.shared.delegate as? AppDelegate)?.persistentContainer.viewContext
-        context?.delete(data)
-        do {
-            try context?.save()
-            completion(.success(()))
-        }catch {
-            completion(.failure(dataBaseErrors.failToDelete))
-        }
-       
-        
-    }
-    
 }
 
-
-extension DownloadedData {
+// MARK: - Downloaded Data Manager
+final class DownloadedData {
     
+    // MARK: - Singleton
+    static let shared = DownloadedData()
     
-    func savelocalData(_ data : Movie? , completion : @escaping((Result<Void,Error>) -> Void)) {
-        
-        let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-        
-        let item = MovieDownloadData(context: context)
-        item.id = Int64(data?.id ?? 0)
-        item.name = data?.name
-        item.original_name = data?.original_name
-        item.original_title = data?.original_title
-        item.overview = data?.overview
-        item.popularity = data?.popularity ?? 0
-        item.poster_path = data?.poster_path
-        item.release_date = data?.release_date
-        item.title = data?.title
-      
-        do {
-            try context.save()
-        }catch {
-            print("error")
+    private init() {}
+    
+    // MARK: - Core Data Context
+    private var context: NSManagedObjectContext? {
+        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
+            return nil
         }
-        
-        
+        return appDelegate.persistentContainer.viewContext
     }
     
-    
-    func getlocalData(completion : ((Result<[MovieDownloadData],Error>)->())) {
-        
-        let contextrequest = MovieDownloadData.fetchRequest()
-        let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-        do {
-          let data =   try context.fetch(contextrequest)
-            completion(.success(data))
-        }catch {
-            print("error")
-            completion(.failure(error))
+    // MARK: - Save Movie
+    func saveData(_ movie: Movie?, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let movie = movie else {
+            completion(.failure(DatabaseError.failedToSave))
+            return
         }
-    }
-    
-    
-    func deleteLocalData(_ data :MovieDownloadData, completion : @escaping((Result<Void,Error>)-> Void) ) {
         
-        let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+        guard let context = context else {
+            completion(.failure(DatabaseError.contextUnavailable))
+            return
+        }
         
-        context.delete(data)
-        do{
+        // Check if movie already exists
+        let fetchRequest: NSFetchRequest<MovieDownloadData> = MovieDownloadData.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "id == %d", movie.id)
+        
+        do {
+            let existingMovies = try context.fetch(fetchRequest)
+            
+            if !existingMovies.isEmpty {
+                // Movie already downloaded
+                completion(.success(()))
+                return
+            }
+            
+            // Create new movie entity
+            let movieEntity = MovieDownloadData(context: context)
+            movieEntity.id = Int64(movie.id)
+            movieEntity.name = movie.name
+            movieEntity.backdrop_path = movie.backdrop_path
+            movieEntity.original_name = movie.original_name
+            movieEntity.original_title = movie.original_title
+            movieEntity.overview = movie.overview
+            movieEntity.popularity = movie.popularity ?? 0.0
+            movieEntity.poster_path = movie.poster_path
+            movieEntity.release_date = movie.release_date
+            movieEntity.title = movie.title
+            
             try context.save()
             completion(.success(()))
-        }catch {
-            completion(.failure(error))
+            
+        } catch {
+            completion(.failure(DatabaseError.failedToSave))
         }
     }
     
+    // MARK: - Fetch All Movies
+    func getData(completion: @escaping (Result<[MovieDownloadData], Error>) -> Void) {
+        guard let context = context else {
+            completion(.failure(DatabaseError.contextUnavailable))
+            return
+        }
+        
+        let fetchRequest: NSFetchRequest<MovieDownloadData> = MovieDownloadData.fetchRequest()
+        
+        // Sort by most recently added
+        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "id", ascending: false)]
+        
+        do {
+            let movies = try context.fetch(fetchRequest)
+            completion(.success(movies))
+        } catch {
+            completion(.failure(DatabaseError.failedToFetch))
+        }
+    }
     
+    // MARK: - Delete Movie
+    func deleteData(_ movie: MovieDownloadData, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let context = context else {
+            completion(.failure(DatabaseError.contextUnavailable))
+            return
+        }
+        
+        context.delete(movie)
+        
+        do {
+            try context.save()
+            completion(.success(()))
+        } catch {
+            completion(.failure(DatabaseError.failedToDelete))
+        }
+    }
+    
+    // MARK: - Check if Movie is Downloaded
+    func isMovieDownloaded(_ movieID: Int, completion: @escaping (Bool) -> Void) {
+        guard let context = context else {
+            completion(false)
+            return
+        }
+        
+        let fetchRequest: NSFetchRequest<MovieDownloadData> = MovieDownloadData.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "id == %d", movieID)
+        fetchRequest.fetchLimit = 1
+        
+        do {
+            let count = try context.count(for: fetchRequest)
+            completion(count > 0)
+        } catch {
+            completion(false)
+        }
+    }
+    
+    // MARK: - Delete All Downloads
+    func deleteAllDownloads(completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let context = context else {
+            completion(.failure(DatabaseError.contextUnavailable))
+            return
+        }
+        
+        let fetchRequest: NSFetchRequest<NSFetchRequestResult> = MovieDownloadData.fetchRequest()
+        let batchDeleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+        
+        do {
+            try context.execute(batchDeleteRequest)
+            try context.save()
+            completion(.success(()))
+        } catch {
+            completion(.failure(DatabaseError.failedToDelete))
+        }
+    }
 }
